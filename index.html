@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>My first three.js app</title>
+    <link href="styles/main.css" rel="stylesheet" type="text/css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js" integrity="sha256-gSh8eotzb/CVvCREGPUNgIWuDnTYnZvVOQnRrP1eDjI=" crossorigin="anonymous"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://threejs.org/examples/js/controls/TrackballControls.js"></script>
+</head>
+
+<body>
+    <div id="before-vis">
+        <input id="input-file" type="file" />
+    </div>
+    <div id="scene-container">
+        <!-- This div will hold our scene-->
+    </div>
+
+    <script src="js/app/dom-maniputalor.js"></script>
+    <script src="js/app/vector.js"></script>
+    <script src="js/app/vector-field-point.js"></script>
+    <script src="js/app/loader.js"></script>
+    <script src="js/app/visualization.js"></script>
+    <script src="js/app/app.js"></script>
+</body>
+
+</html>
