@@ -15,9 +15,7 @@ class Visualization {
         this.initContainer();
         this.initScene();
         this.visualizePoints();
-        this.initCamera();
-        this.initControls();
-        this.fitCameraToObject(this.camera, this.scene, null, this.controls);
+        this.initCameraAndControls();
         this.initLight();
         this.initRenderer();
     }
@@ -44,37 +42,36 @@ class Visualization {
 
         // TODO check if using a standard material with light will make fps drop
         const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        
+
         this.mesh = new THREE.InstancedMesh(geometry, material, this.points.length);
-        
+        this.mesh.frustumCulled = false;
+
         this.points.forEach((point, index) => {
             this.dummy.position.set(point.x, point.y, point.z);
             this.dummy.updateMatrix();
-            
+
             this.mesh.setMatrixAt(index, this.dummy.matrix);
         });
         this.mesh.updateMatrixWorld();
-        
+
         this.scene.add(this.mesh);
     }
 
-    initCamera() {
+    initCameraAndControls() {
         const fov = 35;
         const aspect = this.container.clientWidth / this.container.clientHeight;
-        // TODO near and far need to be set dynamically
         const near = 0.1;
         const far = 1000;
-        
         this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    }
-
-    initControls() {
+        
         this.controls = new THREE.TrackballControls(this.camera, this.container);
         this.controls.rotateSpeed = 5.0;
         this.controls.zoomSpeed = 1.2;
         this.controls.panSpeed = 0.2;
+
+        this.fitCameraToScene();
     }
-    
+
     initLight() {
         // TODO check if using a standard material with light will make fps drop
         // this.scene.add(new THREE.HemisphereLight(0xffffff, 0x202020, 5));
@@ -121,46 +118,39 @@ class Visualization {
         this.renderer.render(this.scene, this.camera);
     }
 
-    onWindowResize() {
+    onWindowResize = () => {
         this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
     }
 
-    fitCameraToObject = function (camera, object, offset, controls) {
-        offset = offset || 1.25;
+    fitCameraToScene() {
+        const offset = 1.25;
         const boundingBox = new THREE.Box3();
-        boundingBox.setFromObject(object);
-        const center = boundingBox.getCenter();
-        const size = boundingBox.getSize();
+
+        // min max coords have to be calculated manually because of instanced mesh's geometry
+        const { minX, minY, minZ, maxX, maxY, maxZ } = VectorFieldPointUtils.minMaxCoords(this.points);
+
+        const center = new THREE.Vector3((maxX + minX) / 2, (maxY + minY) / 2, (maxZ + minZ) / 2);
+        const size = new THREE.Vector3((maxX - minX), (maxY - minY), (maxZ - minZ));
+        boundingBox.setFromCenterAndSize(center, size);
 
         const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = camera.fov * (Math.PI / 180);
+        const fov = this.camera.fov * (Math.PI / 180);
         let cameraZ = maxDim / 2 / Math.tan(fov / 2);
 
         cameraZ *= offset; // zoom out a little so that objects don't fill the screen
 
-        camera.position.x = center.x;
-        camera.position.y = center.y;
-        camera.position.z = center.z + cameraZ;
+        this.camera.position.x = center.x;
+        this.camera.position.y = center.y;
+        this.camera.position.z = center.z + cameraZ;
 
-        // FIXME fit camera to instanced mesh instead of this
-        camera.position.z = 10;
-        
-        const minZ = boundingBox.min.z;
-        let cameraToFarEdge = (minZ < 0) ? -minZ + cameraZ : cameraZ - minZ;
-        
-        // FIXME fit camera to instanced mesh instead of this
-        cameraToFarEdge = 1000;
+        const cameraToFarEdge = (minZ < 0) ? -minZ + cameraZ : cameraZ - minZ;
 
-        camera.far = cameraToFarEdge * 3;
-        camera.updateProjectionMatrix();
+        this.camera.far = cameraToFarEdge * 3;
+        this.camera.updateProjectionMatrix();
 
-        if (controls) {
-            controls.target = center;
-            controls.maxDistance = cameraToFarEdge * 2;
-        } else {
-            camera.lookAt(center)
-        }
+        this.controls.target = center;
+        this.controls.maxDistance = cameraToFarEdge * 2;
     }
 }

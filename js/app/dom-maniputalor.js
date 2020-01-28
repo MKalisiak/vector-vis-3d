@@ -4,7 +4,7 @@ class DOMManipulator {
     }
 
     static hideInputElement() {
-        $('#input-file').hide();
+        document.querySelector('#input-file').style.display = 'none';
     }
 
     // TODO add a mechanism to allow for DOM to be updated during computation (like web worker)
@@ -19,7 +19,8 @@ class DOMManipulator {
     }
 
     static showSceneContainer() {
-        $('#scene-container').show();
+        document.querySelector('#before-vis').style.display = 'none';
+        document.querySelector('#scene-container').style.display = 'block';
     }
 
     static addElementToSceneContainer(element) {

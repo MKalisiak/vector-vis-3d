@@ -35,8 +35,8 @@ class VectorFieldPointUtils {
 
     static normalize(points) {
         let minCoord = Number.MAX_VALUE;
-        let maxCoord = Number.MIN_VALUE;
-        let maxVector = Number.MIN_VALUE;
+        let maxCoord = -Number.MAX_VALUE;
+        let maxVector = -Number.MAX_VALUE;
         points.forEach(point => {
             if (point.x < minCoord) minCoord = point.x;
             if (point.x > maxCoord) maxCoord = point.x;
@@ -66,5 +66,22 @@ class VectorFieldPointUtils {
         })
 
         return points;
+    }
+
+    static minMaxCoords(points) {
+        let minX, minY, minZ, maxX, maxY, maxZ;
+        minX = minY = minZ = Number.MAX_VALUE;
+        maxX = maxY = maxZ = -Number.MAX_VALUE;
+
+        points.forEach(point => {
+            if (point.x < minX) minX = point.x;
+            if (point.x > maxX) maxX = point.x;
+            if (point.y < minY) minY = point.y;
+            if (point.y > maxY) maxY = point.y;
+            if (point.z < minZ) minZ = point.z;
+            if (point.z > maxZ) maxZ = point.z;
+        })
+
+        return {minX, minY, minZ, maxX, maxY, maxZ}
     }
 }
