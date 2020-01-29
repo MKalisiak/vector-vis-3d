@@ -37,17 +37,13 @@ class VectorFieldPointUtils {
         let minCoord = Number.MAX_VALUE;
         let maxCoord = -Number.MAX_VALUE;
         let maxVector = -Number.MAX_VALUE;
+        let localMaxVector;
         points.forEach(point => {
-            if (point.x < minCoord) minCoord = point.x;
-            if (point.x > maxCoord) maxCoord = point.x;
-            if (point.y < minCoord) minCoord = point.y;
-            if (point.y > maxCoord) maxCoord = point.y;
-            if (point.z < minCoord) minCoord = point.z;
-            if (point.z > maxCoord) maxCoord = point.z;
+            if (Math.min(point.x, point.y, point.z) < minCoord) minCoord = Math.min(point.x, point.y, point.z);
+            if (Math.max(point.x, point.y, point.z) > maxCoord) maxCoord = Math.max(point.x, point.y, point.z);
             
-            if (Math.abs(point.vector.x) > maxVector) maxVector = Math.abs(point.vector.x);
-            if (Math.abs(point.vector.y) > maxVector) maxVector = Math.abs(point.vector.y);
-            if (Math.abs(point.vector.z) > maxVector) maxVector = Math.abs(point.vector.z);
+            localMaxVector = Math.max(Math.abs(point.vector.x), Math.abs(point.vector.y), Math.abs(point.vector.z));
+            if (localMaxVector > maxVector) maxVector = localMaxVector;
         });
 
         const coordDivisor = maxCoord - minCoord;
