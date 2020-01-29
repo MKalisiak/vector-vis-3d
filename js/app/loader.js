@@ -1,4 +1,10 @@
 class Loader {
+    static readPoints(xmlData) {
+        const coordinates = xmlData.querySelector('Points>DataArray').innerHTML.replace(/\s+/g, ' ').trim().split(' ');
+        const pointData = xmlData.querySelector('PointData>DataArray').innerHTML.replace(/\s+/g, ' ').trim().split(' ');
+        return { coordinates, pointData };
+    }
+
     static createPoints(coordinates, pointData) {
         if (coordinates.length % 3 !== 0) {
             throw "Wrong number of point coordinates";

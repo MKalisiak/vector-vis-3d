@@ -10,8 +10,8 @@ input.onchange = (event) => {
   reader.onload = () => {
     DOMManipulator.showProgressStatus('Parsing file...');
     const xmlData = new DOMParser().parseFromString(reader.result, 'text/xml');
-    const coordinates = xmlData.querySelector('Points>DataArray').innerHTML.replace(/\s+/g, ' ').trim().split(' ');
-    const pointData = xmlData.querySelector('PointData>DataArray').innerHTML.replace(/\s+/g, ' ').trim().split(' ');
+
+    const { coordinates, pointData } = Loader.readPoints(xmlData);    
 
     DOMManipulator.showProgressStatus('Transforming file to objects...');
     let points = Loader.createPoints(coordinates, pointData);
