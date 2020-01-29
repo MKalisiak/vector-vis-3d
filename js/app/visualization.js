@@ -97,17 +97,15 @@ class Visualization {
     }
 
     update() {
-        const vector = new THREE.Vector3();
+        let x,y,z;
         const time = performance.now() - this.startTime;
         const slowFactor = 500;
         this.points.forEach((point, index) => {
-            vector.set(
-                point.x + (point.vector.length * time * point.vector.x / slowFactor) % (2 * point.vector.x),
-                point.y + (point.vector.length * time * point.vector.y / slowFactor) % (2 * point.vector.y),
-                point.z + (point.vector.length * time * point.vector.z / slowFactor) % (2 * point.vector.z)
-            );
+            x = point.x + (point.vector.length * time * point.vector.x / slowFactor) % (2 * point.vector.x);
+            y = point.y + (point.vector.length * time * point.vector.y / slowFactor) % (2 * point.vector.y);
+            z = point.z + (point.vector.length * time * point.vector.z / slowFactor) % (2 * point.vector.z);
 
-            this.dummy.position.set(vector.x, vector.y, vector.z);
+            this.dummy.position.set(x, y, z);
             this.dummy.updateMatrix();
             this.mesh.setMatrixAt(index, this.dummy.matrix);
         });
