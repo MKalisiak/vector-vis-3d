@@ -126,14 +126,11 @@ class Visualization {
 
     fitCameraToScene() {
         const offset = 1.25;
-        const boundingBox = new THREE.Box3();
-
         // min max coords have to be calculated manually because of instanced mesh's geometry
         const { minX, minY, minZ, maxX, maxY, maxZ } = VectorFieldPointUtils.minMaxCoords(this.points);
 
         const center = new THREE.Vector3((maxX + minX) / 2, (maxY + minY) / 2, (maxZ + minZ) / 2);
         const size = new THREE.Vector3((maxX - minX), (maxY - minY), (maxZ - minZ));
-        boundingBox.setFromCenterAndSize(center, size);
 
         const maxDim = Math.max(size.x, size.y, size.z);
         const fov = this.camera.fov * (Math.PI / 180);
