@@ -101,9 +101,9 @@ class Visualization {
         const time = performance.now() - this.startTime;
         const slowFactor = 500;
         this.points.forEach((point, index) => {
-            x = point.x + (point.vector.length * time * point.vector.x / slowFactor) % (2 * point.vector.x);
-            y = point.y + (point.vector.length * time * point.vector.y / slowFactor) % (2 * point.vector.y);
-            z = point.z + (point.vector.length * time * point.vector.z / slowFactor) % (2 * point.vector.z);
+            x = point.vector.x === 0 ? point.x : point.x + (point.vector.length * time * point.vector.x / slowFactor) % (2 * point.vector.x);
+            y = point.vector.y === 0 ? point.y : point.y + (point.vector.length * time * point.vector.y / slowFactor) % (2 * point.vector.y);
+            z = point.vector.z === 0 ? point.z : point.z + (point.vector.length * time * point.vector.z / slowFactor) % (2 * point.vector.z);
 
             this.dummy.position.set(x, y, z);
             this.dummy.updateMatrix();
@@ -135,6 +135,9 @@ class Visualization {
         let cameraZ = maxDim / 2 / Math.tan(fov / 2);
 
         cameraZ *= offset; // zoom out a little so that objects don't fill the screen
+
+        console.log(cameraZ);
+        
 
         this.camera.position.x = center.x;
         this.camera.position.y = center.y;
