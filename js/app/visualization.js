@@ -20,6 +20,7 @@ class Visualization {
     startTime;
     gui;
     stats;
+    animationFrozen;
 
     constructor(points) {
         this.points = points;
@@ -39,6 +40,7 @@ class Visualization {
         this.initRenderer();
         this.initGui();
         this.initStats();
+        this.animationFrozen = false;
     }
 
     initContainer() {
@@ -118,59 +120,53 @@ class Visualization {
     }
 
     initGui() {
+        const thisHandle = this;
+
         this.gui = new dat.GUI();
         const folderClipping = this.gui.addFolder('Clipping');
-        const renderer = this.renderer,
-            clippingPlanes = this.clippingPlanes,
-            xFromLeftClippingPlane = this.xFromLeftClippingPlane,
-            xFromRightClippingPlane = this.xFromRightClippingPlane,
-            yFromBottomClippingPlane = this.yFromBottomClippingPlane,
-            yFromTopClippingPlane = this.yFromTopClippingPlane,
-            zFromBackClippingPlane = this.zFromBackClippingPlane,
-            zFromFrontClippingPlane = this.zFromFrontClippingPlane;
 
         const propsClipping = {
             get 'Enabled'() {
-                return renderer.clippingPlanes !== Empty;
+                return thisHandle.renderer.clippingPlanes !== Empty;
             },
             set 'Enabled'(v) {
-                renderer.clippingPlanes = v ? clippingPlanes : Empty;
+                thisHandle.renderer.clippingPlanes = v ? thisHandle.clippingPlanes : Empty;
             },
             get 'X left'() {
-                return xFromLeftClippingPlane.constant;
+                return thisHandle.xFromLeftClippingPlane.constant;
             },
             set 'X left'(v) {
-                xFromLeftClippingPlane.constant = v;
+                thisHandle.xFromLeftClippingPlane.constant = v;
             },
             get 'X right'() {
-                return xFromRightClippingPlane.constant;
+                return thisHandle.xFromRightClippingPlane.constant;
             },
             set 'X right'(v) {
-                xFromRightClippingPlane.constant = v;
+                thisHandle.xFromRightClippingPlane.constant = v;
             },
             get 'Y bottom'() {
-                return yFromBottomClippingPlane.constant;
+                return thisHandle.yFromBottomClippingPlane.constant;
             },
             set 'Y bottom'(v) {
-                yFromBottomClippingPlane.constant = v;
+                thisHandle.yFromBottomClippingPlane.constant = v;
             },
             get 'Y top'() {
-                return yFromTopClippingPlane.constant;
+                return thisHandle.yFromTopClippingPlane.constant;
             },
             set 'Y top'(v) {
-                yFromTopClippingPlane.constant = v;
+                thisHandle.yFromTopClippingPlane.constant = v;
             },
             get 'Z back'() {
-                return zFromBackClippingPlane.constant;
+                return thisHandle.zFromBackClippingPlane.constant;
             },
             set 'Z back'(v) {
-                zFromBackClippingPlane.constant = v;
+                thisHandle.zFromBackClippingPlane.constant = v;
             },
             get 'Z front'() {
-                return zFromFrontClippingPlane.constant;
+                return thisHandle.zFromFrontClippingPlane.constant;
             },
             set 'Z front'(v) {
-                zFromFrontClippingPlane.constant = v;
+                thisHandle.zFromFrontClippingPlane.constant = v;
             }
         }
 
@@ -182,6 +178,18 @@ class Visualization {
         folderClipping.add(propsClipping, 'Y top', -1, 1);
         folderClipping.add(propsClipping, 'Z back', -1, 1);
         folderClipping.add(propsClipping, 'Z front', -1, 1);
+
+        const folderAnimation = this.gui.addFolder('Animation');
+        const propsAnimation = {
+            get 'Enabled'() {
+                return !thisHandle.animationFrozen;
+            },
+            set 'Enabled'(v) {
+                thisHandle.freezeAnimation(!v);
+            }
+        }
+
+        folderAnimation.add(propsAnimation, 'Enabled');
     }
 
     initStats() {
@@ -203,6 +211,7 @@ class Visualization {
     }
 
     update() {
+        if (this.animationFrozen) return;
         let x, y, z;
         const time = performance.now() - this.startTime;
         const slowFactor = 500;
@@ -254,5 +263,19 @@ class Visualization {
 
         this.controls.target = center;
         this.controls.maxDistance = cameraToFarEdge * 2;
+    }
+
+    freezeAnimation(frozen) {
+        if (frozen) {
+            this.points.forEach((point, index) => {
+                this.dummy.position.set(point.x, point.y, point.z);
+                this.dummy.updateMatrix();
+                this.mesh.setMatrixAt(index, this.dummy.matrix);
+            });
+            this.mesh.instanceMatrix.needsUpdate = true;
+        } else {
+            this.startTime = performance.now();
+        }
+        this.animationFrozen = frozen;
     }
 }
