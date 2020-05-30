@@ -1,16 +1,35 @@
+const Empty = Object.freeze([]);
+
 class Visualization {
     container;
     camera;
     controls;
     renderer;
+    xFromLeftClippingPlane;
+    xFromRightClippingPlane;
+    yFromBottomClippingPlane;
+    yFromTopClippingPlane;
+    zFromBackClippingPlane;
+    zFromFrontClippingPlane;
+    clippingPlanes;
     scene;
     points;
+    minX; maxX; minY; maxY; minZ; maxZ;
     mesh;
     dummy;
     startTime;
+    gui;
+    stats;
 
     constructor(points) {
         this.points = points;
+        const { minX, minY, minZ, maxX, maxY, maxZ } = VectorFieldPointUtils.minMaxCoords(this.points);
+        this.minX = minX;
+        this.minY = minY;
+        this.minZ = minZ;
+        this.maxX = maxX;
+        this.maxY = maxY;
+        this.maxZ = maxZ;
         this.dummy = new THREE.Object3D();
         this.initContainer();
         this.initScene();
@@ -18,6 +37,8 @@ class Visualization {
         this.initCameraAndControls();
         this.initLight();
         this.initRenderer();
+        this.initGui();
+        this.initStats();
     }
 
     initContainer() {
@@ -40,8 +61,7 @@ class Visualization {
         DOMManipulator.showProgressStatus('Creating points...');
         const geometry = new THREE.SphereBufferGeometry(radius);
 
-        // TODO check if using a standard material with light will make fps drop
-        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const material = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
         this.mesh = new THREE.InstancedMesh(geometry, material, this.points.length);
         this.mesh.frustumCulled = false;
@@ -63,7 +83,7 @@ class Visualization {
         const near = 0.1;
         const far = 1000;
         this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        
+
         this.controls = new THREE.TrackballControls(this.camera, this.container);
         this.controls.rotateSpeed = 5.0;
         this.controls.zoomSpeed = 1.2;
@@ -73,14 +93,100 @@ class Visualization {
     }
 
     initLight() {
-        // TODO check if using a standard material with light will make fps drop
-        // this.scene.add(new THREE.HemisphereLight(0xffffff, 0x202020, 5));
+        this.scene.add(new THREE.HemisphereLight(0xffffff, 0x202020, 3));
     }
 
     initRenderer() {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.xFromLeftClippingPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 1);
+        this.xFromRightClippingPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 1);
+        this.yFromBottomClippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1);
+        this.yFromTopClippingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1);
+        this.zFromBackClippingPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 1);
+        this.zFromFrontClippingPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1);
+        this.clippingPlanes = [
+            this.xFromLeftClippingPlane,
+            this.xFromRightClippingPlane,
+            this.yFromBottomClippingPlane,
+            this.yFromTopClippingPlane,
+            this.zFromBackClippingPlane,
+            this.zFromFrontClippingPlane
+        ];
+        this.renderer.clippingPlanes = Empty;
+    }
+
+    initGui() {
+        this.gui = new dat.GUI();
+        const folderClipping = this.gui.addFolder('Clipping');
+        const renderer = this.renderer,
+            clippingPlanes = this.clippingPlanes,
+            xFromLeftClippingPlane = this.xFromLeftClippingPlane,
+            xFromRightClippingPlane = this.xFromRightClippingPlane,
+            yFromBottomClippingPlane = this.yFromBottomClippingPlane,
+            yFromTopClippingPlane = this.yFromTopClippingPlane,
+            zFromBackClippingPlane = this.zFromBackClippingPlane,
+            zFromFrontClippingPlane = this.zFromFrontClippingPlane;
+
+        const propsClipping = {
+            get 'Enabled'() {
+                return renderer.clippingPlanes !== Empty;
+            },
+            set 'Enabled'(v) {
+                renderer.clippingPlanes = v ? clippingPlanes : Empty;
+            },
+            get 'X left'() {
+                return xFromLeftClippingPlane.constant;
+            },
+            set 'X left'(v) {
+                xFromLeftClippingPlane.constant = v;
+            },
+            get 'X right'() {
+                return xFromRightClippingPlane.constant;
+            },
+            set 'X right'(v) {
+                xFromRightClippingPlane.constant = v;
+            },
+            get 'Y bottom'() {
+                return yFromBottomClippingPlane.constant;
+            },
+            set 'Y bottom'(v) {
+                yFromBottomClippingPlane.constant = v;
+            },
+            get 'Y top'() {
+                return yFromTopClippingPlane.constant;
+            },
+            set 'Y top'(v) {
+                yFromTopClippingPlane.constant = v;
+            },
+            get 'Z back'() {
+                return zFromBackClippingPlane.constant;
+            },
+            set 'Z back'(v) {
+                zFromBackClippingPlane.constant = v;
+            },
+            get 'Z front'() {
+                return zFromFrontClippingPlane.constant;
+            },
+            set 'Z front'(v) {
+                zFromFrontClippingPlane.constant = v;
+            }
+        }
+
+        // for clipping range assume points are normalized
+        folderClipping.add(propsClipping, 'Enabled');
+        folderClipping.add(propsClipping, 'X left', -1, 1);
+        folderClipping.add(propsClipping, 'X right', -1, 1);
+        folderClipping.add(propsClipping, 'Y bottom', -1, 1);
+        folderClipping.add(propsClipping, 'Y top', -1, 1);
+        folderClipping.add(propsClipping, 'Z back', -1, 1);
+        folderClipping.add(propsClipping, 'Z front', -1, 1);
+    }
+
+    initStats() {
+        this.stats = new Stats();
+        document.body.appendChild(this.stats.dom);
     }
 
     start() {
@@ -97,7 +203,7 @@ class Visualization {
     }
 
     update() {
-        let x,y,z;
+        let x, y, z;
         const time = performance.now() - this.startTime;
         const slowFactor = 500;
         this.points.forEach((point, index) => {
@@ -113,7 +219,9 @@ class Visualization {
     }
 
     render() {
+        this.stats.begin();
         this.renderer.render(this.scene, this.camera);
+        this.stats.end();
     }
 
     onWindowResize = () => {
@@ -125,25 +233,21 @@ class Visualization {
     fitCameraToScene() {
         const offset = 1.25;
         // min max coords have to be calculated manually because of instanced mesh's geometry
-        const { minX, minY, minZ, maxX, maxY, maxZ } = VectorFieldPointUtils.minMaxCoords(this.points);
 
-        const center = new THREE.Vector3((maxX + minX) / 2, (maxY + minY) / 2, (maxZ + minZ) / 2);
-        const size = new THREE.Vector3((maxX - minX), (maxY - minY), (maxZ - minZ));
+        const center = new THREE.Vector3((this.maxX + this.minX) / 2, (this.maxY + this.minY) / 2, (this.maxZ + this.minZ) / 2);
+        const size = new THREE.Vector3((this.maxX - this.minX), (this.maxY - this.minY), (this.maxZ - this.minZ));
 
         const maxDim = Math.max(size.x, size.y, size.z);
         const fov = this.camera.fov * (Math.PI / 180);
         let cameraZ = maxDim / 2 / Math.tan(fov / 2);
 
-        cameraZ *= offset; // zoom out a little so that objects don't fill the screen
-
-        console.log(cameraZ);
-        
+        cameraZ *= offset; // zoom out a little so that objects don't fill the screen        
 
         this.camera.position.x = center.x;
         this.camera.position.y = center.y;
         this.camera.position.z = center.z + cameraZ;
 
-        const cameraToFarEdge = (minZ < 0) ? -minZ + cameraZ : cameraZ - minZ;
+        const cameraToFarEdge = (this.minZ < 0) ? -this.minZ + cameraZ : cameraZ - this.minZ;
 
         this.camera.far = cameraToFarEdge * 3;
         this.camera.updateProjectionMatrix();
