@@ -3,6 +3,7 @@ const Empty = Object.freeze([]);
 class Visualization {
     container;
     camera;
+    orthoCamera;
     controls;
     renderer;
     xFromLeftClippingPlane;
@@ -13,6 +14,9 @@ class Visualization {
     zFromFrontClippingPlane;
     clippingPlanes;
     scene;
+    uiScene;
+    lut;
+    colorsLutSprite;
     points;
     minX; maxX; minY; maxY; minZ; maxZ;
     mesh;
@@ -21,6 +25,8 @@ class Visualization {
     gui;
     stats;
     animationFrozen;
+    colorsEnabled;
+    colorMap;
 
     constructor(points) {
         this.points = points;
@@ -52,6 +58,7 @@ class Visualization {
     initScene() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000);
+        this.uiScene =  new THREE.Scene();
     }
 
     visualizePoints() {
@@ -63,7 +70,30 @@ class Visualization {
         DOMManipulator.showProgressStatus('Creating points...');
         const geometry = new THREE.SphereBufferGeometry(radius);
 
+        this.colorsEnabled = true;
+        this.colorMap = 'rainbow';
+        this.lut = new Lut( this.colorMap, 512 );
+
+        this.colorsLutSprite = new THREE.Sprite( new THREE.SpriteMaterial( {
+            map: new THREE.CanvasTexture( this.lut.createCanvas() )
+        } ) );
+        this.colorsLutSprite.scale.x = 0.08;
+        this.uiScene.add( this.colorsLutSprite );
+
+        const instanceColors = [];
+
+        let color;
+        for (let i = 0; i < this.points.length; i++) {
+            color = this.lut.getColor(this.points[i].vector.length);
+            instanceColors.push( color.r );
+            instanceColors.push( color.g );
+            instanceColors.push( color.b );
+        }
+
+        geometry.setAttribute( 'color', new THREE.InstancedBufferAttribute( new Float32Array( instanceColors ), 3 ) );
+
         const material = new THREE.MeshLambertMaterial({ color: 0xffffff });
+        material.vertexColors = true;
 
         this.mesh = new THREE.InstancedMesh(geometry, material, this.points.length);
         this.mesh.frustumCulled = false;
@@ -92,6 +122,9 @@ class Visualization {
         this.controls.panSpeed = 0.2;
 
         this.fitCameraToScene();
+
+        this.orthoCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 1, 2 );
+        this.orthoCamera.position.set(0.96, 0, 1 );
     }
 
     initLight() {
@@ -117,6 +150,7 @@ class Visualization {
             this.zFromFrontClippingPlane
         ];
         this.renderer.clippingPlanes = Empty;
+        this.renderer.autoClear = false;
     }
 
     initGui() {
@@ -190,6 +224,25 @@ class Visualization {
         }
 
         folderAnimation.add(propsAnimation, 'Enabled');
+
+        const folderColors = this.gui.addFolder('Colors');
+        const propsColors = {
+            get 'Enabled'() {
+                return !!thisHandle.colorsEnabled;
+            },
+            set 'Enabled'(v) {
+                thisHandle.toggleColors(v);
+            },
+            get 'Color Map'() {
+                return thisHandle.colorMap;
+            },
+            set 'Color Map'(v) {
+                thisHandle.updateColors(v);
+            }
+        }
+
+        folderColors.add(propsColors, 'Enabled');
+        // folderColors.add(propsColors, 'Color Map', [ 'rainbow', 'cooltowarm', 'blackbody', 'grayscale' ]);
     }
 
     initStats() {
@@ -204,9 +257,11 @@ class Visualization {
 
         this.startTime = performance.now();
         this.renderer.setAnimationLoop(() => {
+            this.stats.begin();
             this.update();
             this.controls.update();
             this.render();
+            this.stats.end();
         });
     }
 
@@ -228,9 +283,9 @@ class Visualization {
     }
 
     render() {
-        this.stats.begin();
+        this.renderer.clear();
         this.renderer.render(this.scene, this.camera);
-        this.stats.end();
+        this.renderer.render(this.uiScene, this.orthoCamera);
     }
 
     onWindowResize = () => {
@@ -278,4 +333,43 @@ class Visualization {
         }
         this.animationFrozen = frozen;
     }
+
+    toggleColors(active) {
+        if (active) {
+            this.uiScene.add(this.colorsLutSprite);
+            this.mesh.material.vertexColors = true;
+        } else {
+            this.uiScene.remove(this.colorsLutSprite);
+            this.mesh.material.vertexColors = false;
+        }
+        this.mesh.material.needsUpdate = true;
+        this.colorsEnabled = active;
+    }
+
+    // updateColors(colorMap) {
+    //     this.lut.setColorMap(colorMap);
+    //     // this.lut.setMin(0);
+    //     // this.lut.setMax(1);
+
+    //     const colors = this.mesh.geometry.attributes.color;
+
+    //     let color;
+    //     for (let i = 0; i < this.points.length; i++) {
+    //         color = this.lut.getColor(this.points[i].vector.length);
+
+    //         if ( color === undefined ) {
+    //             console.log( 'Unable to determine color for value: ', colorValue );
+    //         } else {
+    //             colors.setXYZ(i, color.r, color.g, color.b);
+    //         }
+    //     }
+
+    //     colors.needsUpdate = true;
+
+    //     const map = this.colorsLutSprite.material.map;
+    //     this.lut.updateCanvas( map.image );
+    //     map.needsUpdate = true;
+
+    //     this.colorMap = colorMap;
+    // }
 }
